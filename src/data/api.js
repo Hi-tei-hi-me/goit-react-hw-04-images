@@ -6,28 +6,32 @@ axios.defaults.baseURL = 'https://pixabay.com/api';
 
 // Images that have received an Editor's Choice award:
 // https://pixabay.com/api/?key=${PIXABAY_KEY}&editors_choice=true
-export const EditorsChoiceImages = async (page = 1) => {
+export const editorsChoiceImages = async (page = 1) => {
   const response = await axios.get(
     `/?key=${PIXABAY_KEY}&editors_choice=true&page=${page}&per_page=12`
   );
   const totalHits = response.data.totalHits;
-  const data = response.data.hits.map(({ id, webformatURL, largeImageURL }) => ({
-    id,
-    webformatURL,
-    largeImageURL,
-  }));
+  const data = response.data.hits.map(
+    ({ id, webformatURL, largeImageURL }) => ({
+      id,
+      webformatURL,
+      largeImageURL,
+    })
+  );
   return { totalHits, data };
 };
 
-export const fetchImages = async (searchQuery, page) => {
+export const queryImages = async (searchQuery, page) => {
   const response = await axios.get(
     `/?q=${searchQuery}&page=${page}&key=${PIXABAY_KEY}&image_type=photo&orientation=horizontal&per_page=12`
   );
   const totalHits = response.data.totalHits;
-  const data = response.data.hits.map(({ id, webformatURL, largeImageURL }) => ({
-    id,
-    webformatURL,
-    largeImageURL,
-  }));
+  const data = response.data.hits.map(
+    ({ id, webformatURL, largeImageURL }) => ({
+      id,
+      webformatURL,
+      largeImageURL,
+    })
+  );
   return { totalHits, data };
 };

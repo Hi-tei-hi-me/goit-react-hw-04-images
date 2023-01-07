@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { Toaster } from 'react-hot-toast';
 import * as API from '../data/api';
 import { AppWrap } from './Wrapper/AppWrap.styled';
@@ -9,93 +9,91 @@ import { Loader } from './Loader/Loader';
 import { Error } from './Error/Error';
 import { showToast } from 'utils/toaster';
 
-const INITIAL_STATE = {
-  searchQuery: '',
-  images: [],
-  page: 1,
-  totalHits: null,
-  isLoading: false,
-  error: '',
-};
+export const App = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [images, setImages] = useState([]);
+  const [page, setPage] = useState(1);
+  const [totalHits, setTotalHits] = useState(0);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState({ isLoading: false });
+  const totalPages = totalHits / 12;
 
-export class App extends Component {
-  state = { ...INITIAL_STATE };
-  async componentDidMount() {
-    try {
-      this.setState({ isLoading: true });
-      const images = await API.EditorsChoiceImages();
-      this.setState({
-        images: [...images.data],
-        totalHits: images.totalHits,
-      });
-      showToast('Look how many cool pics our editors have chosen for you!', 'editorsChoice');
-    } catch (error) {
-      this.setState({ error: error.message });
-    } finally {
-      this.setState({ isLoading: false });
-    }
-  }
-  async componentDidUpdate(_, prevState) {
-    const { searchQuery, page } = this.state;
-    if (prevState.searchQuery !== searchQuery || prevState.page !== page) {
+  useEffect(() => {
+    const fetchEditorsChoiceImages = async () => {
       try {
-        this.setState({ isLoading: true, error: '' });
-        const images = await API.fetchImages(searchQuery, page);
+        setIsLoading({ isLoading: true });
+        const images = await API.editorsChoiceImages();
+        setImages([...images.data]);
+        setTotalHits(images.totalHits);
+        setError('');
+        showToast(
+          'Look how many cool pics our editors have chosen for you!',
+          'editorsChoice'
+        );
+      } catch (error) {
+        setError(error.message);
+      } finally {
+        setIsLoading({ isLoading: false });
+      }
+    };
+    fetchEditorsChoiceImages();
+  }, []);
+  useEffect(() => {
+    const fetchImages = async () => {
+      try {
+        setIsLoading({ isLoading: true });
+        const images = await API.queryImages(searchQuery, page);
+        setImages(prevState => [...prevState, ...images.data]);
         if (!images.data.length) {
-          showToast(`Sorry, we couldn't find any ${searchQuery}`, 'nothingFound');
-          return;
+          return showToast(
+            `Sorry, we couldn't find any ${searchQuery}`,
+            'nothingFound'
+          );
         }
         if (images.data.length && page === 1) {
-          showToast(`Hooray! We have found ${images.totalHits} photos of ${searchQuery}`, 'found');
+          showToast(
+            `Hooray! We have found ${images.totalHits} photos of ${searchQuery}`,
+            'found'
+          );
         }
-        this.setState(prevState => ({
-          images: [...prevState.images, ...images.data],
-          totalHits: images.totalHits,
-        }));
+        setTotalHits(images.totalHits);
+        setError('');
       } catch (error) {
-        this.setState({ error: error.message });
+        setError(error.message);
       } finally {
-        this.setState({ isLoading: false });
+        setIsLoading({ isLoading: false });
       }
-    }
-  }
-  onSubmit = ({ searchQuery }) => {
-    if (searchQuery === this.state.searchQuery) {
-      showToast(
+    };
+    fetchImages();
+  }, [searchQuery, page]);
+  const onSubmit = ({ searchQuery }) => {
+    if (searchQuery === setSearchQuery) {
+      return showToast(
         `There are no another ${searchQuery} images for you, but you can try to find something else`,
         'repeatedQuery'
       );
-      return;
     }
-    this.setState({
-      searchQuery,
-      images: [],
-      page: 1,
-    });
+    setSearchQuery(searchQuery);
+    setImages([]);
+    setPage(1);
   };
-  loadMore = () => {
-    this.setState(prevState => ({
-      page: prevState.page + 1,
-    }));
+  const loadMore = () => {
+    setPage(prevState => prevState + 1);
   };
-  render() {
-    const { images, totalHits, page, isLoading, error } = this.state;
-    const totalPages = totalHits / 12;
-    return (
-      <>
-        <Toaster position="top-right" reverseOrder={false} />
+  return (
+    <>
+      <Toaster position="top-right" reverseOrder={false} />
+      <AppWrap>
+        <Searchbar onSubmit={onSubmit} />
+      </AppWrap>
+      {isLoading && <Loader />}
+      {images.length > 0 && (
         <AppWrap>
-          <Searchbar onSubmit={this.onSubmit} />
+          <ImageGallery images={images} />
+          {totalPages > page && <Button onClick={loadMore} />}
         </AppWrap>
-        {isLoading && <Loader />}
-        {images.length > 0 && (
-          <AppWrap>
-            <ImageGallery images={images} />
-            {totalPages > page && <Button onClick={this.loadMore} />}
-          </AppWrap>
-        )}
-        {error && <Error textError={error} />}
-      </>
-    );
-  }
-}
+      )}
+      {error && <Error textError={error} />}
+    </>
+  );
+};
