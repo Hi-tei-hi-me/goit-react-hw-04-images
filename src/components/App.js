@@ -15,25 +15,25 @@ export const App = () => {
   const [page, setPage] = useState(1);
   const [totalHits, setTotalHits] = useState(0);
   const [error, setError] = useState('');
-  const [isLoading, setIsLoading] = useState({ isLoading: false });
+  const [isLoading, setIsLoading] = useState(false);
   const totalPages = totalHits / 12;
 
   useEffect(() => {
     const fetchEditorsChoiceImages = async () => {
       try {
-        setIsLoading({ isLoading: true });
+        setIsLoading(true);
         const images = await API.editorsChoiceImages();
         setImages([...images.data]);
         setTotalHits(images.totalHits);
-        setError('');
         showToast(
           'Look how many cool pics our editors have chosen for you!',
           'editorsChoice'
         );
+        setError('');
       } catch (error) {
         setError(error.message);
       } finally {
-        setIsLoading({ isLoading: false });
+        setIsLoading(false);
       }
     };
     fetchEditorsChoiceImages();
@@ -41,9 +41,10 @@ export const App = () => {
   useEffect(() => {
     const fetchImages = async () => {
       try {
-        setIsLoading({ isLoading: true });
+        setIsLoading(true);
         const images = await API.queryImages(searchQuery, page);
         setImages(prevState => [...prevState, ...images.data]);
+        setTotalHits(images.totalHits);
         if (!images.data.length) {
           return showToast(
             `Sorry, we couldn't find any ${searchQuery}`,
@@ -56,44 +57,44 @@ export const App = () => {
             'found'
           );
         }
-        setTotalHits(images.totalHits);
         setError('');
       } catch (error) {
         setError(error.message);
       } finally {
-        setIsLoading({ isLoading: false });
+        setIsLoading(false);
       }
     };
-    fetchImages();
+    if (searchQuery.trim().toLowerCase() !== '') {
+      fetchImages();
+    }
   }, [searchQuery, page]);
-  const onSubmit = ({ searchQuery }) => {
-    if (searchQuery === setSearchQuery) {
+  const onSubmit = data => {
+    if (data.searchQuery.trim().toLowerCase() === searchQuery) {
       return showToast(
         `There are no another ${searchQuery} images for you, but you can try to find something else`,
         'repeatedQuery'
       );
     }
-    setSearchQuery(searchQuery);
+    setSearchQuery(data.searchQuery);
     setImages([]);
     setPage(1);
   };
   const loadMore = () => {
     setPage(prevState => prevState + 1);
   };
+
+  const showImgGallery = images.length > 0;
+  const showLoadMoreBtn = images.length > 0 && totalPages > page;
   return (
     <>
       <Toaster position="top-right" reverseOrder={false} />
       <AppWrap>
         <Searchbar onSubmit={onSubmit} />
+        {showImgGallery && <ImageGallery images={images} />}
+        {isLoading && <Loader />}
+        {showLoadMoreBtn && <Button onClick={loadMore} />}
+        {error && <Error textError={error} />}
       </AppWrap>
-      {isLoading && <Loader />}
-      {images.length > 0 && (
-        <AppWrap>
-          <ImageGallery images={images} />
-          {totalPages > page && <Button onClick={loadMore} />}
-        </AppWrap>
-      )}
-      {error && <Error textError={error} />}
     </>
   );
 };
