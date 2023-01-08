@@ -19,16 +19,21 @@ export const App = () => {
   const totalPages = totalHits / 12;
 
   useEffect(() => {
+    if (searchQuery) {
+      return;
+    }
     const fetchEditorsChoiceImages = async () => {
       try {
         setIsLoading(true);
-        const images = await API.editorsChoiceImages();
-        setImages([...images.data]);
+        const images = await API.editorsChoiceImages(page);
+        setImages(prevState => [...prevState, ...images.data]);
         setTotalHits(images.totalHits);
-        showToast(
-          'Look how many cool pics our editors have chosen for you!',
-          'editorsChoice'
-        );
+        if (page === 1) {
+          showToast(
+            'Look how many cool pics our editors have chosen for you!',
+            'editorsChoice'
+          );
+        }
         setError('');
       } catch (error) {
         setError(error.message);
@@ -37,8 +42,11 @@ export const App = () => {
       }
     };
     fetchEditorsChoiceImages();
-  }, []);
+  }, [searchQuery, page]);
   useEffect(() => {
+    if (!searchQuery) {
+      return;
+    }
     const fetchImages = async () => {
       try {
         setIsLoading(true);
@@ -51,7 +59,7 @@ export const App = () => {
             'nothingFound'
           );
         }
-        if (images.data.length && page === 1) {
+        if (page === 1) {
           showToast(
             `Hooray! We have found ${images.totalHits} photos of ${searchQuery}`,
             'found'
@@ -64,18 +72,17 @@ export const App = () => {
         setIsLoading(false);
       }
     };
-    if (searchQuery.trim().toLowerCase() !== '') {
-      fetchImages();
-    }
+    fetchImages();
   }, [searchQuery, page]);
   const onSubmit = data => {
-    if (data.searchQuery.trim().toLowerCase() === searchQuery) {
+    const normalizedQuery = data.searchQuery.trim().toLowerCase();
+    if (normalizedQuery === searchQuery) {
       return showToast(
         `There are no another ${searchQuery} images for you, but you can try to find something else`,
         'repeatedQuery'
       );
     }
-    setSearchQuery(data.searchQuery);
+    setSearchQuery(normalizedQuery);
     setImages([]);
     setPage(1);
   };
